@@ -1,20 +1,13 @@
 <template>
   <h1 style="text-align: center; margin-bottom: 2rem">Songs</h1>
-  <div v-for="({ title, artist, tracks, price }, index) in albums">
-    <div
-      style="
-        position: relative;
-        padding: 1rem 1.25rem;
-        background-color: black;
-        color: white;
-      "
-    >
+  <div v-for="({ title, artist, tracks, price }, index) in albums" :key="title">
+    <div class="album">
       <div style="margin-bottom: 0.25rem">
         <b>{{ title }}</b>
       </div>
       <div>{{ artist }}</div>
       <button @click="showPrice(index)">
-        {{ price ? price : "Show Price" }}
+        {{ price ?? "Show Price" }}
       </button>
     </div>
     <table>
@@ -26,7 +19,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="({ name, duration }, index) in tracks">
+        <tr v-for="({ name, duration }, index) in tracks" :key="name">
           <td>{{ index + 1 }}</td>
           <td>{{ name }}</td>
           <td style="text-align: center">
@@ -42,20 +35,24 @@
 import * as Vue from "vue";
 import getPrice from "./api/getPrice";
 
+interface Track {
+  name: string;
+  duration: number;
+}
+
 interface Album {
   title: string;
   artist: string;
   price?: string;
-  tracks: Record<string, any>[];
+  tracks: Track[];
 }
 
+const padDuration = (duration: number) => duration.toString().padStart(2, "0");
+
 export default Vue.defineComponent({
-  data: (): {
-    albums: Album[];
-  } => ({
+  data: () => ({
     albums: [
       {
-        title: "PLANET GOLD",
         artist: "Sofiane Pamart",
         price: undefined,
         tracks: [
@@ -94,33 +91,28 @@ export default Vue.defineComponent({
           { name: "The Other Side", duration: 221 },
         ],
       },
-    ],
+    ] as Album[],
   }),
 
   methods: {
-    showPrice(id: any) {
-      getPrice(id)
-        .then((price) => {
-          return { euros: Math.floor(price / 100), cents: price % 100 };
-        })
-        .then(({ euros, cents }) => {
-          this.albums[id].price = [euros, cents].join(".") + `€`;
-        });
+    async showPrice(id: any) {
+      const price = await getPrice(id);
+      const euros = Math.floor(price / 100);
+      const cents = price % 100;
+      this.albums[id].price = `${euros}.${cents}€`;
     },
 
     getHumanReadableDuration(duration: number) {
-      let m = Math.floor(duration / 60);
-      var s: number = duration % 60;
+      const minutes = Math.floor(duration / 60);
+      const seconds = duration % 60;
 
-      return (
-        m.toString().padStart(2, "0") + ":" + s.toString().padStart(2, "0")
-      );
+      return `${padDuration(minutes)}:${padDuration(seconds)}`;
     },
   },
 });
 </script>
 
-<style lang="scss">
+<style lang="scss" scope>
 #app {
   margin-top: 60px;
   -webkit-font-smoothing: antialiased;
@@ -133,5 +125,12 @@ button {
   position: absolute;
   top: 1.5rem;
   right: 1rem;
+}
+
+.album {
+  position: relative;
+  padding: 1rem 1.25rem;
+  background-color: black;
+  color: white;
 }
 </style>
